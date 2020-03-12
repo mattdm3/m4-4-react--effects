@@ -11,8 +11,8 @@ One way to do this:
 ```js live=true
 const Form = () => {
   React.useEffect(() => {
+    //this is NOT GOOD PRACTICE - harder to maintain as we bypass react. See BELOW
     const firstNameInput = document.querySelector('#first-name');
-
     firstNameInput.focus();
   }, []);
 
@@ -33,10 +33,9 @@ const Form = () => {
 
 render(<Form />);
 ```
-
 ---
 
-This works, but it's not ideal
+***This works, but it's not ideal***
 
 - Requires globally-unique IDs
 - Has to re-look-up the item on every render
@@ -95,7 +94,7 @@ What are some things you notice about this code?
 Use `useRef`
 
 ---
-
+ORIGINAL
 ```js
 const ConfirmButton = () => {
   React.useEffect(() => {
@@ -107,6 +106,23 @@ const ConfirmButton = () => {
   }, []);
 
   return <button id="confirm-button">Confirm</button>;
+};
+```
+MINE / answer not confirmed... 
+```js
+const ConfirmButton = () => {
+
+  const confirmButton = React.useRef(null);
+
+  React.useEffect(() => {
+    if(confirmButton) {
+        confirmButton.current.focus();
+    }
+  
+    
+  }, []);
+
+  return <button ref={confirmButton} id="confirm-button">Confirm</button>;
 };
 ```
 

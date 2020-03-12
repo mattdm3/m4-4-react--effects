@@ -7,7 +7,7 @@ const Item = ({
   cost,
   value,
   numOwned,
-  handleAttemptedPurchase,
+  handleAttemptedPurchase
 }) => {
   const ref = React.useRef(null);
 
