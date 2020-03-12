@@ -117,10 +117,12 @@ You _definitely_ don't want to do this in every render
 
 ---
 
+The problem here is that there are two fetches; the first one should be removed or it will be looping... You might also want to remove "cart" or it will loop... just put empty array. See tip below
 ```js
 const App = () => {
   const [cart, setCart] = React.useState({});
 
+//remove this fetch
   fetch('some-url')
     .then(data => {
       console.log('Got data:', data);
@@ -133,7 +135,7 @@ const App = () => {
           console.log('Got data:', data);
           setCart(data);
         });
-    
+    //remove cart below, replace w []
       return JSON.stringify(cart, null, 2);
   }, [cart]);
   
@@ -152,7 +154,7 @@ const App = () => {
 Update the following snippets to make use of `useEffect`
 
 ---
-
+original
 ```js
 const App = () => {
   const [count, setCount] = React.useState(0);
@@ -166,9 +168,25 @@ const App = () => {
   );
 }
 ```
+Mine: 
+```js
+const App = () => {
+  const [count, setCount] = React.useState(0);
+
+  React.useEffect(()=> {
+    document.title = `You have clicked ${count} times`;
+  }, [count]);
+
+  return (
+    <button onClick={() => setCount(count + 1)}>
+      Increment
+    </button>
+  );
+}
+```
 
 ---
-
+Original
 ```js
 const App = ({ color }) => {
   const [value, setValue] = React.useState(false);
@@ -187,8 +205,36 @@ const App = ({ color }) => {
 }
 ```
 
----
+MINE;
 
+```js
+const App = ({ color }) => {
+  const [value, setValue] = React.useState(false);
+
+
+  React.useState(()=> {
+    window.localStorage.setItem('color', color);
+  }, [color])
+
+  React.useState(()=> {
+    window.localStorage.setItem('value', value);
+  }, [value])
+
+  return (
+    <div>
+      Value: {value}
+      <button onClick={() => setValue(!value)}>
+        Toggle thing
+      </button>
+    </div>
+  );
+}
+```
+
+---
+WHEN USING EVENT LISTENER WITHOUT STATE
+
+ORIGINAL
 ```js
 const Modal = ({ handleClose }) => {
   window.addEventListener('keydown', (ev) => {
@@ -196,6 +242,29 @@ const Modal = ({ handleClose }) => {
       handleClose();
     }
   });
+
+  return (
+    <div>
+      Modal stuff
+    </div>
+  );
+}
+```
+
+MINE
+
+```js
+const Modal = ({ handleClose }) => {
+ 
+ React.useEffect(()=>{
+window.addEventListener('keydown', (ev) => {
+    if (ev.code === 'Escape') {
+      handleClose();
+    }
+  })
+
+ }, [])
+ 
 
   return (
     <div>
@@ -267,8 +336,9 @@ The scroll handler _doesn't go away_ just because we changed components.
 const Home = () => {
   React.useEffect(() => {
     window.addEventListener('scroll', aFunc());
-
+    
     return () => {
+      //After the reeturn you can clean up
       window.removeEventListener('scroll', aFunc());
     }
   }, []);
@@ -310,7 +380,7 @@ import updateDSrc from './assets/update-D.svg';
 Make sure to do the appropriate cleanup work
 
 ---
-
+ORIGINAL
 ```js
 // seTimeout is similar to setInterval...
 const App = () => {
@@ -323,8 +393,28 @@ const App = () => {
   return null;
 }
 ```
+MINE
+```js
+// seTimeout is similar to setInterval...
+const App = () => {
+    React.useEffect ()=> {
 
+      const timerTofu = window.setTimeout((time) => {
+      console.log('1 second after update!')
+    }, time);
+      
+
+      return ()=> {
+        clearTimeout(timerTofu);
+      }
+    }
+  }, [])
+
+  return null;
+}
+```
 ---
+ORIGINAL
 
 ```js
 const App = () => {
@@ -332,6 +422,27 @@ const App = () => {
     window.addEventListener('keydown', (ev) => {
       console.log('You pressed: ' + ev.code);
     })
+  }, [])
+
+  return null;
+}
+```
+MINE
+
+```js
+const App = () => {
+
+  const message = (ev) => {
+    console.log('You pressed: ' + ev.code)
+  }
+
+
+  React.useEffect(() => {
+    window.addEventListener('keydown', message);
+    
+    return () => {
+      window.removeEventListener('keydown', message);
+    }
   }, [])
 
   return null;
@@ -372,6 +483,7 @@ Tracking mouse position
 <div class="row">
 <div class="col">
 
+ORIGI
 ```js
 const App = ({ path }) => {
   const [mousePosition, setMousePosition] = React.useState({
@@ -398,6 +510,41 @@ const App = ({ path }) => {
   )
 }
 ```
+MINE HOW TO MAKE CUSTOM HOOKS
+```js
+//ALWAYS use "use"
+const useMoustPos = () => {
+  const [mousePosition, setMousePosition] = React.useState({
+    x: null,
+    y: null
+  });
+
+  React.useEffect(() => {
+    const handleMousemove = (ev) => {
+      setMousePosition({ x: ev.clientX, y: ev.clientY });
+    };
+
+    window.addEventListener('mousemove', handleMousemove);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMousemove)
+    }
+  }, []);
+
+  return mousePosition
+}
+
+const App = ({path}) => {
+  const mousePosition = useMousePos();
+  return (
+      <div>
+        The mouse is at {mousePosition.x}, {mousePosition.y}.
+      </div>
+    )
+}
+
+
+```
 </div>
 <div class='col'>
 
@@ -415,7 +562,7 @@ const App = ({ path }) => {
 Extract a custom hook
 
 ---
-
+ORIGINAL
 ```js
 const App = ({ path }) => {
   const [data, setData] = React.useState(null);
@@ -428,6 +575,34 @@ const App = ({ path }) => {
       })
   }, [path])
 
+  return (
+    <span>
+      Data: {JSON.stringify(data)}
+    </span>
+  );
+}
+```
+
+MINE
+
+```js
+//ALWAYS use "use"
+const useData = ({path}) => {
+  const [data, setData] = React.useState(null);
+
+  React.useEffect(() => {
+    fetch(path)
+      .then(res => res.json())
+      .then(json => {
+        setData(json);       
+      })
+  }, [path]);
+
+  return data;
+}
+
+const App = ({path}) => {
+  const data = useData(path); 
   return (
     <span>
       Data: {JSON.stringify(data)}
